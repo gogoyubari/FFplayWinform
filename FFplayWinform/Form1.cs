@@ -1,22 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Diagnostics;
 using System.Threading;
-using System.IO;
-using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Drawing.Text;
-using System.Text.RegularExpressions;
 using System.Configuration;
-using Microsoft.Win32;
-using System.Windows.Forms.VisualStyles;
 
 namespace FFplayWinform
 {
@@ -32,21 +19,30 @@ namespace FFplayWinform
         {
             InitializeComponent();
             Application.EnableVisualStyles();
-            this.DoubleBuffered = true;
+            DoubleBuffered = true;
         }
 
         public Process ffplay1 = new Process();
         public Process ffplay2 = new Process();
         private void FFplay()
         {
+            string adress = ConfigurationManager.AppSettings["adress"];
+            string port = ConfigurationManager.AppSettings["port"];
+
             ffplay1.StartInfo.FileName = @"ffplay.exe";
-            ffplay1.StartInfo.Arguments = $@"-fflags nobuffer -analyzeduration 500000 -i udp://224.1.1.1:10001?timeout=3000000 -top 2000 -left 0 -x 720 -noborder";
+            ffplay1.StartInfo.Arguments = $@"-fflags nobuffer -analyzeduration 500000 -i udp://{adress}:{port}?timeout=3000000 -top 2000 -left 0 -x 720 -noborder";
             ffplay1.StartInfo.CreateNoWindow = true;
             ffplay1.StartInfo.UseShellExecute = false;
             ffplay1.Start();
 
             ffplay2.StartInfo.FileName = @"ffplay.exe";
-            ffplay2.StartInfo.Arguments = $@"-fflags nobuffer -analyzeduration 500000 -f lavfi -i amovie=udp\\://224.1.1.1\\:10001?timeout=3000000,showvolume=f=0:w=720:h=10:dm=1:p=1 -top 2000 -left 0 -noborder";
+            // showvolume params:
+            //  'f' Set fade, allowed range is [0, 1].
+            //  'w' Set channel width, allowed range is [80, 8192].
+            //  'h' Set channel height, allowed range is [1, 900].
+            //  'dm' In second. If set to > 0., display a line for the max level in the previous seconds.
+            //  'p' Set background opacity, allowed range is [0, 1].
+            ffplay2.StartInfo.Arguments = $@"-fflags nobuffer -analyzeduration 500000 -f lavfi -i amovie=udp\\://{adress}\\:{port}?timeout=3000000,showvolume=f=0:w=720:h=10:dm=1:p=1 -top 2000 -left 0 -noborder";
             ffplay2.StartInfo.CreateNoWindow = true;
             ffplay2.StartInfo.UseShellExecute = false;
             ffplay2.Start();
@@ -61,10 +57,8 @@ namespace FFplayWinform
         }
         private void Form1_Load(object sender, EventArgs e)
         {
+            Text = $"udp://{ConfigurationManager.AppSettings["adress"]}:{ConfigurationManager.AppSettings["port"]}";
             FFplay();
-        }
-        private void Form1_FormClosed(object sender, FormClosedEventArgs e)
-        {
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
