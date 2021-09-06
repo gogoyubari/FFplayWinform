@@ -57,12 +57,24 @@ namespace FFplayWinform
         }
         private void Form1_Load(object sender, EventArgs e)
         {
+            Location = Properties.Settings.Default.Form1Location;
             Text = $"udp://{ConfigurationManager.AppSettings["adress"]}:{ConfigurationManager.AppSettings["port"]}";
+
             FFplay();
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
+            if (WindowState == FormWindowState.Normal)
+            {
+                Properties.Settings.Default.Form1Location = Location;
+            }
+            else
+            { 
+                Properties.Settings.Default.Form1Location = RestoreBounds.Location;
+            }
+            Properties.Settings.Default.Save();
+
             try
             {
                 ffplay1.CloseMainWindow();
