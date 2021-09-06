@@ -48,7 +48,7 @@ namespace FFplayWinform
             ffplay2.Start();
 
             Thread.Sleep(3000);
-            
+
             SetParent(ffplay1.MainWindowHandle, panel1.Handle);
             MoveWindow(ffplay1.MainWindowHandle, 0, 0, 720, 405, true);
 
@@ -70,7 +70,7 @@ namespace FFplayWinform
                 Properties.Settings.Default.Form1Location = Location;
             }
             else
-            { 
+            {
                 Properties.Settings.Default.Form1Location = RestoreBounds.Location;
             }
             Properties.Settings.Default.Save();
@@ -84,5 +84,22 @@ namespace FFplayWinform
             }
             catch { }
         }
+
+        private const int SnapDist = 50;
+        private bool DoSnap(int pos, int edge)
+        {
+            int delta = Math.Abs(pos - edge);
+            return delta > 0 && delta <= SnapDist;
+        }
+        protected override void OnResizeEnd(EventArgs e)
+        {
+            base.OnResizeEnd(e);
+            Screen scn = Screen.FromPoint(Location);
+            if (DoSnap(Left, scn.WorkingArea.Left)) Left = scn.WorkingArea.Left - 10;
+            if (DoSnap(Top, scn.WorkingArea.Top)) Top = scn.WorkingArea.Top;
+            if (DoSnap(scn.WorkingArea.Right, Right)) Left = scn.WorkingArea.Right + 10 - Width;
+            if (DoSnap(scn.WorkingArea.Bottom, Bottom)) Top = scn.WorkingArea.Bottom + 10 - Height;
+        }
     }
 }
+
