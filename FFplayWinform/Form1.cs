@@ -30,7 +30,7 @@ namespace FFplayWinform
             string port = ConfigurationManager.AppSettings["port"];
 
             ffplay1.StartInfo.FileName = @"ffplay.exe";
-            ffplay1.StartInfo.Arguments = $@"-fflags nobuffer -analyzeduration 500000 -i udp://{adress}:{port}?timeout=3000000 -top 2000 -left 0 -x 720 -noborder";
+            ffplay1.StartInfo.Arguments = $@"-fflags nobuffer -probesize 32 -analyzeduration 0 -sync ext -i udp://{adress}:{port}?timeout=3000000 -top 2000 -left 0 -x 720 -noborder";
             ffplay1.StartInfo.CreateNoWindow = true;
             ffplay1.StartInfo.UseShellExecute = false;
             ffplay1.Start();
@@ -42,7 +42,7 @@ namespace FFplayWinform
             //  'h' Set channel height, allowed range is [1, 900].
             //  'dm' In second. If set to > 0., display a line for the max level in the previous seconds.
             //  'p' Set background opacity, allowed range is [0, 1].
-            ffplay2.StartInfo.Arguments = $@"-fflags nobuffer -analyzeduration 500000 -f lavfi -i amovie=udp\\://{adress}\\:{port}?timeout=3000000,showvolume=f=0:w=720:h=10:dm=1:p=1 -top 2000 -left 0 -noborder";
+            ffplay2.StartInfo.Arguments = $@"-fflags nobuffer -probesize 32 -analyzeduration 0 -sync ext -f lavfi -i amovie=udp\\://{adress}\\:{port}?timeout=3000000,showvolume=f=0:w=720:h=10:dm=1:p=1 -top 2000 -left 0 -noborder";
             ffplay2.StartInfo.CreateNoWindow = true;
             ffplay2.StartInfo.UseShellExecute = false;
             ffplay2.Start();
