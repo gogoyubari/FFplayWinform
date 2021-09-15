@@ -47,7 +47,13 @@ namespace FFplayWinform
             ffplay2.StartInfo.UseShellExecute = false;
             ffplay2.Start();
 
-            Thread.Sleep(3000);
+            while ((ffplay1.MainWindowHandle == IntPtr.Zero && ffplay1.HasExited == false) ||
+                (ffplay2.MainWindowHandle == IntPtr.Zero && ffplay2.HasExited == false))
+            {
+                Thread.Sleep(100);
+                ffplay1.Refresh();
+                ffplay2.Refresh();
+            }
 
             SetParent(ffplay1.MainWindowHandle, panel1.Handle);
             MoveWindow(ffplay1.MainWindowHandle, 0, 0, 720, 405, true);
@@ -58,7 +64,7 @@ namespace FFplayWinform
         private void Form1_Load(object sender, EventArgs e)
         {
             Location = Properties.Settings.Default.Form1Location;
-            Text = $"udp://{ConfigurationManager.AppSettings["adress"]}:{ConfigurationManager.AppSettings["port"]}";
+            //Text = $"udp://{ConfigurationManager.AppSettings["adress"]}:{ConfigurationManager.AppSettings["port"]}";
 
             FFplay();
         }
@@ -99,6 +105,25 @@ namespace FFplayWinform
             if (DoSnap(Top, scn.WorkingArea.Top)) Top = scn.WorkingArea.Top;
             if (DoSnap(scn.WorkingArea.Right, Right)) Left = scn.WorkingArea.Right + 10 - Width;
             if (DoSnap(scn.WorkingArea.Bottom, Bottom)) Top = scn.WorkingArea.Bottom + 10 - Height;
+        }
+
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+            if (DateTime.Now.ToString("mmss") == "0000")
+            {
+                try
+                {
+                    ffplay1.CloseMainWindow();
+                    ffplay2.CloseMainWindow();
+                    ffplay1.WaitForExit(5000);
+                    ffplay2.WaitForExit(5000);
+                }
+                catch { }
+                finally
+                {
+                    FFplay();
+                }
+            }
         }
     }
 }
