@@ -71,7 +71,7 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>MediaExpress_0.ico</ApplicationIcon>
+    <ApplicationIcon>ffmpeg-icon-13.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -153,7 +153,7 @@
     </COMReference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="MediaExpress_0.ico" />
+    <Content Include="ffmpeg-icon-13.ico" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.7.2">
