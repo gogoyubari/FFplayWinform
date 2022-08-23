@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Runtime.InteropServices;
 using System.Configuration;
+using System.IO;
 
 namespace FFplayWinform
 {
@@ -11,62 +12,88 @@ namespace FFplayWinform
     {
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
-
         [DllImport("user32.dll")]
         private static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
+        [DllImport("user32.dll")]
+        public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        private static readonly string ChildApp = Path.Combine(Directory.GetCurrentDirectory(), "ffplay.exe");
+        private string FFplayTitle = "";
+        private Process pFFplay = null;
 
         public Form1()
         {
             InitializeComponent();
             Application.EnableVisualStyles();
             DoubleBuffered = true;
+
+            foreach (var p in Process.GetProcessesByName(Path.GetFileNameWithoutExtension(ChildApp))) { p.Kill(); }
         }
 
-        public Process ffplay1 = new Process();
-        public Process ffplay2 = new Process();
-        private void FFplay()
+        private void StartFFplay()
         {
             string adress = ConfigurationManager.AppSettings["adress"];
             string port = ConfigurationManager.AppSettings["port"];
+            string log_level = "-loglevel warning";
+            string reduce_the_delay = "-fflags nobuffer -probesize 4M -analyzeduration 0";
+            int width = 720;
+            int height = 405;
+            int height_s = 10;
+            string color = "'if(lte(VOLUME,-1),if(lte(VOLUME,-2),0xff00ff00,0xff00ffff),0xff0000ff)'"; // 緑 < -2dB < 黄 < -1dB < 赤
+            string udp = $@"udp\\://{adress}\\:{port}";
+            string resize = $"scale={width}:-1,crop=w={width}:h={height}:x=0:y=0";
+            string showvolume = $"showvolume=w={width}:h={height_s}:f=0:c={color}:v=0:dm=.5:s=0:m=p:ds=log";
+            string filter = $"movie={udp}:s=dv+da[v][a];[v]{resize}[v];[a]asplit[a][out1];[a]{showvolume}[s];[v][s]vstack";
+            FFplayTitle = Guid.NewGuid().ToString();
 
-            ffplay1.StartInfo.FileName = @"ffplay.exe";
-            ffplay1.StartInfo.Arguments = $@"-fflags nobuffer -probesize 32 -analyzeduration 0 -sync ext -i udp://{adress}:{port}?timeout=3000000 -top 2000 -left 0 -x 720 -noborder";
-            ffplay1.StartInfo.CreateNoWindow = true;
-            ffplay1.StartInfo.UseShellExecute = false;
-            ffplay1.Start();
+            pFFplay = new Process();
+            pFFplay.StartInfo.FileName = ChildApp;
+            pFFplay.StartInfo.Arguments = $@"{log_level} {reduce_the_delay} -f lavfi -i {filter}  -window_title {FFplayTitle} -top 1080 -left 0 -noborder";
+            pFFplay.StartInfo.CreateNoWindow = true;
+            pFFplay.StartInfo.UseShellExecute = false;
+            pFFplay.Start();
 
-            ffplay2.StartInfo.FileName = @"ffplay.exe";
-            // showvolume params:
-            //  'f' Set fade, allowed range is [0, 1].
-            //  'w' Set channel width, allowed range is [80, 8192].
-            //  'h' Set channel height, allowed range is [1, 900].
-            //  'dm' In second. If set to > 0., display a line for the max level in the previous seconds.
-            //  'p' Set background opacity, allowed range is [0, 1].
-            ffplay2.StartInfo.Arguments = $@"-fflags nobuffer -probesize 32 -analyzeduration 0 -sync ext -f lavfi -i amovie=udp\\://{adress}\\:{port}?timeout=3000000,showvolume=f=0:w=720:h=10:dm=1:p=1 -top 2000 -left 0 -noborder";
-            ffplay2.StartInfo.CreateNoWindow = true;
-            ffplay2.StartInfo.UseShellExecute = false;
-            ffplay2.Start();
-
-            while ((ffplay1.MainWindowHandle == IntPtr.Zero && ffplay1.HasExited == false) ||
-                (ffplay2.MainWindowHandle == IntPtr.Zero && ffplay2.HasExited == false))
+            int timeout = 0;
+            while (timeout < 5000)
             {
+                foreach (var p in Process.GetProcessesByName(Path.GetFileNameWithoutExtension(ChildApp)))
+                {
+                    if (p.MainWindowTitle == FFplayTitle)
+                    {
+                        SetParent(p.MainWindowHandle, panel1.Handle);
+                        MoveWindow(p.MainWindowHandle, 0, 0, width, height + 2 * height_s, true);
+                        return;
+                    }
+                }
                 Thread.Sleep(100);
-                ffplay1.Refresh();
-                ffplay2.Refresh();
+                timeout += 100;
+            }
+        }
+        private void StopFFplay()
+        {
+            foreach (var p in Process.GetProcessesByName(Path.GetFileNameWithoutExtension(ChildApp)))
+            {
+                if (p.MainWindowTitle == FFplayTitle)
+                {
+                    SetForegroundWindow(p.MainWindowHandle);
+                    SendKeys.Send("{ESC}");
+                    break;
+                }
             }
 
-            SetParent(ffplay1.MainWindowHandle, panel1.Handle);
-            MoveWindow(ffplay1.MainWindowHandle, 0, 0, 720, 405, true);
-
-            SetParent(ffplay2.MainWindowHandle, panel2.Handle);
-            MoveWindow(ffplay2.MainWindowHandle, 0, 0, 720, 20, true);
+            if (pFFplay != null)
+            {
+                pFFplay.Kill();
+                pFFplay.WaitForExit();
+                pFFplay.Close();
+                pFFplay.Dispose();
+                pFFplay = null;
+            }
         }
         private void Form1_Load(object sender, EventArgs e)
         {
             Location = Properties.Settings.Default.Form1Location;
-            //Text = $"udp://{ConfigurationManager.AppSettings["adress"]}:{ConfigurationManager.AppSettings["port"]}";
-
-            FFplay();
+            StartFFplay();
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
@@ -81,14 +108,7 @@ namespace FFplayWinform
             }
             Properties.Settings.Default.Save();
 
-            try
-            {
-                ffplay1.CloseMainWindow();
-                ffplay2.CloseMainWindow();
-                ffplay1.WaitForExit(5000);
-                ffplay2.WaitForExit(5000);
-            }
-            catch { }
+            StopFFplay();
         }
 
         private const int SnapDist = 50;
@@ -111,18 +131,8 @@ namespace FFplayWinform
         {
             if (DateTime.Now.ToString("mmss") == "0000")
             {
-                try
-                {
-                    ffplay1.CloseMainWindow();
-                    ffplay2.CloseMainWindow();
-                    ffplay1.WaitForExit(5000);
-                    ffplay2.WaitForExit(5000);
-                }
-                catch { }
-                finally
-                {
-                    FFplay();
-                }
+                StopFFplay();
+                StartFFplay();
             }
         }
     }
