@@ -135,6 +135,21 @@ namespace FFplayWinform
                 StartFFplay();
             }
         }
+
+        protected override void WndProc(ref Message m)
+        {
+            const int WM_NCLBUTTONDBLCLK = 0x00A3;
+
+            if (m.Msg == WM_NCLBUTTONDBLCLK)
+            {
+                StopFFplay();
+                StartFFplay();
+            }
+            else
+            {
+                base.WndProc(ref m);
+            }
+        }
     }
 }
 
